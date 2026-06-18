@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos generados en cada ejecución (no se versionan, se regeneran)
+salida/*.xlsx
+logs/*.log
+
+# Configuración de entorno específica de cada máquina (rutas absolutas)
+pyvenv.cfg
