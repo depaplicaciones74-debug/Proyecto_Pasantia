@@ -55,7 +55,7 @@ def procesar_pdf(ruta_pdf: Path, logger: logging.Logger) -> dict:
         palabras = page.extract_words()
 
     if not texto:
-        raise ValueError("No se pudo extraer texto (¿PDF escaneado/imagen?)")
+        raise ValueError("❌ No se pudo extraer texto (¿PDF escaneado/imagen?)")
 
     encabezado = extraer_encabezado(texto)
 
@@ -108,7 +108,7 @@ def mover_a_procesados(documentos: list, carpeta_procesados: Path, logger: loggi
             shutil.move(str(ruta_pdf), str(destino))
             logger.info(f"{ruta_pdf.name}: movido a {carpeta_procesados}")
         except OSError as error:
-            logger.error(f"{ruta_pdf.name}: no se pudo mover a {carpeta_procesados} - {error}")
+            logger.error(f"❌ {ruta_pdf.name}: no se pudo mover a {carpeta_procesados} - {error}")
 
 
 def filtrar_duplicados(documentos: list, ruta_excel: str, logger: logging.Logger) -> list:
@@ -135,7 +135,7 @@ def filtrar_duplicados(documentos: list, ruta_excel: str, logger: logging.Logger
 
         if numero is not None and numero in vistos:
             logger.error(
-                f"{nombre_pdf}: DUPLICADO - el documento No. {numero} ya existe "
+                f"❌ {nombre_pdf}: DUPLICADO - el documento No. {numero} ya existe "
                 f"en el Excel acumulado o se repite en este mismo lote, "
                 f"no se agregará de nuevo"
             )
@@ -152,7 +152,7 @@ def filtrar_duplicados(documentos: list, ruta_excel: str, logger: logging.Logger
 def procesar_carpeta(carpeta: Path, logger: logging.Logger) -> list:
     archivos_pdf = sorted(carpeta.glob("*.pdf"))
     if not archivos_pdf:
-        logger.warning(f"No se encontraron archivos PDF en {carpeta}")
+        logger.warning(f"❌ No se encontraron archivos PDF en {carpeta}")
         return []
 
     documentos = []
@@ -169,7 +169,7 @@ def procesar_carpeta(carpeta: Path, logger: logging.Logger) -> list:
             logger.error(f"{ruta_pdf.name}: FALLÓ - {error}")
             fallidos += 1
 
-    logger.info(f"Resumen: {exitosos} procesados, {fallidos} con error, de {len(archivos_pdf)} totales")
+    logger.info(f"Resumen: ✅ {exitosos} procesados , ❌ {fallidos} con error, de {len(archivos_pdf)} totales")
     return documentos
 
 
@@ -229,7 +229,7 @@ def main():
     documentos = procesar_carpeta(carpeta, logger)
 
     if not documentos:
-        logger.warning("No se generó ningún Excel: no hay documentos procesados")
+        logger.warning("❌ No se generó ningún Excel: no hay documentos procesados")
         sys.exit(1)
 
     if args.por_archivo:
@@ -253,7 +253,7 @@ def main():
 
         documentos = filtrar_duplicados(documentos, str(ruta_salida), logger)
         if not documentos:
-            logger.warning("Todos los documentos eran duplicados; no se actualizó el Excel")
+            logger.warning("❌ Todos los documentos eran duplicados; no se actualizó el Excel")
             sys.exit(1)
 
         generar_excel(documentos, str(ruta_salida))
