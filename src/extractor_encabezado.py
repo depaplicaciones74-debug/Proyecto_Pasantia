@@ -45,29 +45,43 @@ INDICADOR_BIEN_SERVICIO = 1
 
 
 def _convertir_fecha(valor: Optional[str]) -> Optional[datetime]:
-    """Convierte fechas en formato DD.MM.YYYY a datetime."""
     if not valor:
         return None
-
     valor = valor.strip()
-
-    for formato in ("%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y"):
+    for formato in (
+        "%d.%m.%Y",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%-d.%-m.%Y",   # sin cero: 2.6.2026
+        "%-d/%-m/%Y",   # sin cero: 2/6/2026
+        "%-d-%-m-%Y",   # sin cero: 2-6-2026
+    ):
         try:
             return datetime.strptime(valor, formato)
         except ValueError:
             pass
-
     return None
 
 
 def _convertir_monto(valor: Optional[str]) -> Optional[float]:
-    """Convierte montos con formato 166,881.78 a float."""
-
     if not valor:
         return None
-
+    valor = valor.strip()
+    # Formato europeo: 166.881,78 → convertir a 166881.78
+    if "," in valor and "." in valor:
+        if valor.index(",") > valor.index("."):
+            # El punto es separador de miles, la coma es decimal
+            valor = valor.replace(".", "").replace(",", ".")
+        else:
+            # El punto es decimal (formato normal), quitar comas
+            valor = valor.replace(",", "")
+    elif "," in valor:
+        # Solo coma — asumir decimal europeo
+        valor = valor.replace(",", ".")
+    else:
+        valor = valor.replace(",", "")
     try:
-        return float(valor.replace(",", ""))
+        return float(valor)
     except ValueError:
         return None
 

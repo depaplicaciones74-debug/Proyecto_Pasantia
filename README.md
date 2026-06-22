@@ -13,7 +13,7 @@ estructura requerida por el portal de facturación electrónica.
 - NCF Modificado
 - Fecha de Documento
 - No. de Documento
-- Indicador de Bien/Servicio (constante = 1, requerido por el portal)
+- Indicador de Bien/Servicio (constante = 1)
 - Fecha de Vencimiento
 - RNC del Cliente
 - Cliente
@@ -26,8 +26,7 @@ estructura requerida por el portal de facturación electrónica.
 
 ## Esquema del Excel generado
 
-A diferencia de un Excel "tabular" tradicional, este proyecto usa un
-**esquema de bloque por documento**, pensado para que el archivo se lea
+Este proyecto usa un esquema de bloque por documento, pensado para que el archivo se lea
 de forma natural visualmente:
 
 | Tipo Documento | NCF | NCF Modificado | Fecha Documento | No. Documento | ... | Monto | ID Documento | Observaciones |
@@ -38,20 +37,24 @@ de forma natural visualmente:
 | | RELIQ CONTRATO SIE 2025 | | | | | 5,612.09 | 800001168 | |
 | | RELIQ CONTRATO CNE 2025 | | | | | 1,870.70 | 800001168 | |
 
-- La **primera fila de cada documento** lleva el encabezado completo: el
+- La primera fila de cada documento lleva el encabezado completo: el
   NCF real en la columna "NCF" y el total del documento en la columna
   "Monto".
-- Las **filas siguientes** (una por cada línea de concepto) dejan vacías
+
+- Las filas siguientes (una por cada línea de concepto) dejan vacías
   todas las columnas de encabezado, excepto: la columna "NCF" (que aquí
-  lleva la **descripción** del concepto, no un NCF) y la columna "Monto"
+  lleva la descripción del concepto, no un NCF) y la columna "Monto"
   (que lleva el importe de ese concepto).
-- La columna **"ID Documento (Nombre de archivo Origen)"** se repite en
+
+- La columna "ID Documento (Nombre de archivo Origen)" se repite en
   todas las filas de un mismo documento (encabezado y detalle), y es la
   que garantiza la relación encabezado-detalle de forma explícita, sin
   depender solo de la posición visual en la hoja.
+
 - El siguiente documento empieza inmediatamente después, sin fila vacía
   de separación; su propia fila de encabezado ya marca el inicio del
   siguiente bloque.
+  
 - La fila de encabezado de cada documento se resalta con fondo azul claro
   y texto en negrita para distinguirla visualmente de las filas de
   detalle.
