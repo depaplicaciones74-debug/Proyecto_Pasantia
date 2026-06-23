@@ -128,7 +128,9 @@ def _construir_filas(documentos: list) -> list:
                 "numero_documento"
             )
 
-            # Repetir observaciones
+            # Repetir ncf_modificado y observaciones en todas las filas del documento
+            fila_detalle["ncf_modificado"] = encabezado.get("ncf_modificado")
+            fila_detalle["observaciones"]  = encabezado.get("observaciones")
 
 
             fila_detalle["_es_encabezado"] = False
