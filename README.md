@@ -1,33 +1,128 @@
 # EGEHID — Extracción de Notas de Crédito PDF a Excel
 
-Herramienta de procesamiento por lotes que extrae los datos de Notas de
-Crédito (PDF) de EGEHID y los consolida en un archivo Excel con la
-estructura requerida por el portal de facturación electrónica.
+Herramienta de procesamiento por lotes que extrae los datos de Notas de Crédito (PDF) de EGEHID y los consolida en un archivo Excel con la estructura requerida por el portal de facturación electrónica.
+
+---
+
+## Estructura del proyecto
+
+```
+Proyecto_Pasantia/
+├── src/
+│   ├── procesar.py               # Script principal / orquestador del lote
+│   ├── extractor_encabezado.py   # Extrae campos de encabezado (regex sobre anclas de texto)
+│   ├── extractor_detalle.py      # Extrae líneas de detalle (por coordenadas)
+│   └── generador_excel.py        # Construye el Excel final con el esquema de bloque
+├── tests/
+│   └── test_extraccion.py        # Pruebas automatizadas
+├── muestras/                     # Coloca aquí los PDF a procesar
+├── salida/                       # El Excel generado aparece aquí
+├── logs/                         # Logs de cada ejecución
+├── procesados/                   # Los PDF ya procesados se mueven aquí automáticamente
+├── requirements.txt
+└── README.md
+```
+
+> Las carpetas `muestras/`, `salida/`, `logs/` y `procesados/` se crean
+> automáticamente la primera vez que se ejecuta `procesar.py`. No hace falta crearlas a mano.
+
+---
+
+## Instalación
+
+```bash
+git clone https://github.com/depaplicaciones74-debug/Proyecto_Pasantia
+cd Proyecto_Pasantia
+python -m venv venv
+```
+
+Activar el entorno virtual:
+
+```bash
+# Windows
+venv\Scripts\activate
+
+# Mac / Linux
+source venv/bin/activate
+```
+
+Instalar dependencias:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Uso
+
+Todos los comandos se ejecutan desde la carpeta `src/`.
+
+```bash
+cd src
+```
+
+### Excel consolidado con todos los PDF de la carpeta muestras/
+
+```bash
+python procesar.py
+```
+
+### Especificar carpeta y archivo de salida manualmente
+
+```bash
+python procesar.py --carpeta ../muestras --salida ../salida/resultado.xlsx
+```
+
+### Un Excel independiente por cada PDF
+
+```bash
+python procesar.py --por-archivo
+```
+
+### No mover los PDF a procesados/ tras ejecutar
+
+```bash
+python procesar.py --no-mover
+```
+
+### Parámetros disponibles
+
+| Parámetro | Por defecto | Descripción |
+|---|---|---|
+| `--carpeta` | `muestras/` | Carpeta con los PDF a procesar |
+| `--salida` | `salida/resultado.xlsx` | Ruta del Excel de salida |
+| `--por-archivo` | — | Genera un Excel por cada PDF |
+| `--log` | `logs/procesamiento.log` | Ruta del archivo de log |
+| `--carpeta-procesados` | `procesados/` | Carpeta destino de los PDF ya procesados |
+| `--no-mover` | — | No mover los PDF tras procesarlos |
+
+---
 
 ## Campos extraídos
 
 **Encabezado** (un valor por documento):
-- Tipo de Documento (detectado automáticamente: Nota de Crédito, Nota de
-  Débito o Factura)
+- Tipo de Documento (detectado automáticamente: Nota de Crédito, Nota de Débito o Factura)
 - NCF
 - NCF Modificado
 - Fecha de Documento
 - No. de Documento
-- Indicador de Bien/Servicio (constante = 1)
+- Indicador de Bien/Servicio (constante = 1, requerido por el portal)
 - Fecha de Vencimiento
 - RNC del Cliente
 - Cliente
 - Monto (total del documento)
 - Observaciones
 
-**Detalle** (una línea por cada concepto de la factura):
+**Detalle** (una fila por cada concepto de la factura):
 - Descripción
 - Monto
 
+---
+
 ## Esquema del Excel generado
 
-Este proyecto usa un esquema de bloque por documento, pensado para que el archivo se lea
-de forma natural visualmente:
+El archivo usa un esquema de bloque por documento:
 
 | Tipo Documento | NCF | NCF Modificado | Fecha Documento | No. Documento | ... | Monto | ID Documento | Observaciones |
 |---|---|---|---|---|---|---|---|---|
@@ -37,163 +132,84 @@ de forma natural visualmente:
 | | RELIQ CONTRATO SIE 2025 | | | | | 5,612.09 | 800001168 | |
 | | RELIQ CONTRATO CNE 2025 | | | | | 1,870.70 | 800001168 | |
 
-- La primera fila de cada documento lleva el encabezado completo: el
-  NCF real en la columna "NCF" y el total del documento en la columna
-  "Monto".
+- La **primera fila** de cada documento lleva el encabezado completo con el NCF real y el total en "Monto".
+- Las **filas de detalle** dejan vacías todas las columnas de encabezado, excepto "NCF" (que lleva la descripción del concepto) y "Monto" (que lleva el importe de ese concepto).
+- La columna **"ID Documento"** se repite en todas las filas del mismo documento para mantener la relación encabezado-detalle sin depender de la posición visual.
+- El siguiente documento empieza inmediatamente después, sin fila vacía de separación.
+- La fila de encabezado de cada documento se resalta en **azul claro con negrita**.
+- Fechas y montos se guardan con su tipo de dato real (`datetime` y `float`), nunca como texto.
 
-- Las filas siguientes (una por cada línea de concepto) dejan vacías
-  todas las columnas de encabezado, excepto: la columna "NCF" (que aquí
-  lleva la descripción del concepto, no un NCF) y la columna "Monto"
-  (que lleva el importe de ese concepto).
+---
 
-- La columna "ID Documento (Nombre de archivo Origen)" se repite en
-  todas las filas de un mismo documento (encabezado y detalle), y es la
-  que garantiza la relación encabezado-detalle de forma explícita, sin
-  depender solo de la posición visual en la hoja.
+## Log de procesamiento
 
-- El siguiente documento empieza inmediatamente después, sin fila vacía
-  de separación; su propia fila de encabezado ya marca el inicio del
-  siguiente bloque.
-  
-- La fila de encabezado de cada documento se resalta con fondo azul claro
-  y texto en negrita para distinguirla visualmente de las filas de
-  detalle.
-- Fechas y montos quedan con su tipo de dato real (`datetime` y `float`
-  de Python, formato de fecha y de moneda en Excel), nunca como texto.
+Cada ejecución genera un log en `logs/procesamiento.log` con tres niveles:
 
-## Instalación
+- `INFO` — documento procesado correctamente, o resumen final.
+- `WARNING` — el documento se procesó pero con alguna inconsistencia: campo faltante, sin líneas de detalle, o el total no cuadra con la suma del detalle. El documento **sí se incluye** en el Excel.
+- `ERROR` — el PDF no se pudo abrir o no tiene texto extraíble (PDF escaneado). El documento **no se incluye** en el Excel, pero el resto del lote continúa con normalidad.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate          # En Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-> En Windows, si `pip install` falla por permisos, usa
-> `pip install -r requirements.txt --user` o asegúrate de tener el
-> entorno virtual activado (debe aparecer `(venv)` al inicio de la línea
-> de comandos).
-
-## Uso
-
-Todos los comandos se ejecutan desde la carpeta `src/`.
-
-### Un Excel consolidado con todas las facturas de una carpeta
-
-```bash
-python procesar.py --carpeta ../muestras --salida ../salida/resultado.xlsx
-```
-
-### Un Excel por cada factura
-
-```bash
-python procesar.py --carpeta ../muestras --salida ../salida --por-archivo
-```
-
-### Parámetros
-
-| Parámetro | Obligatorio | Por defecto | Descripción |
-|---|---|---|---|
-| `--carpeta` | No | `muestras` | Carpeta que contiene los PDF a procesar |
-| `--salida` | No | `salida/resultado.xlsx` | Ruta del Excel (o carpeta, si se usa `--por-archivo`) |
-| `--por-archivo` | No | — | Genera un Excel independiente por cada PDF |
-| `--log` | No | `logs/procesamiento.log` | Ruta del archivo de log |
+---
 
 ## Pruebas automatizadas
 
-El proyecto incluye un set de pruebas (`tests/test_extraccion.py`) que
-valida la extracción contra resultados esperados conocidos del PDF de
-muestra, además de casos de robustez ante campos faltantes:
-
 ```bash
+# Desde la raíz del proyecto
 python tests/test_extraccion.py
-```
 
-o, si tienes pytest instalado:
-
-```bash
-pip install pytest --break-system-packages
+# O con pytest
+pip install pytest
 python -m pytest tests/ -v
 ```
 
 Las pruebas cubren:
-- Que el encabezado y el detalle del PDF de muestra se extraigan
-  correctamente y con el tipo de dato esperado (fechas como `datetime`,
-  montos como `float`).
-- Que la suma de las líneas de detalle cuadre con el total del
-  encabezado.
-- Que el extractor **no lance excepciones** cuando faltan campos clave
-  o no hay tabla de detalle reconocible — esto es lo que se prueba
-  intencionalmente con el archivo `Nota_Credito_Prueba.pdf`: ese PDF no
-  contiene los campos esperados a propósito, para verificar que el
-  sistema registra el problema en el log y sigue procesando el resto
-  del lote sin detenerse.
+- Que el encabezado y el detalle se extraigan correctamente con el tipo de dato esperado (fechas como `datetime`, montos como `float`).
+- Que la suma de las líneas de detalle cuadre con el total del encabezado.
+- Que el extractor no lance excepciones cuando faltan campos clave o no hay tabla de detalle reconocible, verificando que el sistema registra el problema en el log y continúa procesando el resto del lote.
 
-## Salida
-
-El Excel generado tiene una sola hoja ("Facturacion") con el esquema de
-bloque descrito arriba. El control de cuadre (verificar que la suma del
-detalle coincida con el total del encabezado) ya no se muestra en una
-hoja separada; en su lugar, **se registra como advertencia en el log**
-si algún documento no cuadra (ver sección de Log).
-
-## Log de procesamiento
-
-Cada ejecución genera un log con tres niveles de mensaje:
-
-- `INFO`: documento procesado correctamente, o resumen final
-  (`X procesados, Y con error, de Z totales`).
-- `WARNING`: el documento se procesó pero con alguna inconsistencia —
-  campos clave no encontrados, sin líneas de detalle, o el total no
-  cuadra con la suma del detalle. El documento **sigue incluido** en el
-  Excel, con los campos faltantes vacíos.
-- `ERROR`: el PDF no se pudo abrir o no tiene texto extraíble (por
-  ejemplo, un PDF escaneado). Ese documento **no se incluye** en el
-  Excel, pero el resto del lote continúa procesándose con normalidad.
-
-## Estructura del proyecto
-
-```
-egehid_pdf2excel/
-├── src/
-│   ├── extractor_encabezado.py   # Extrae campos de encabezado (regex sobre anclas de texto)
-│   ├── extractor_detalle.py      # Extrae líneas de detalle (por coordenadas)
-│   ├── generador_excel.py        # Construye el Excel final con el esquema de bloque
-│   └── procesar.py               # Script principal (CLI) / orquestador del lote
-├── muestras/                     # PDF de ejemplo y casos de prueba de robustez
-├── salida/                       # Excels generados (no se versiona en git)
-├── logs/                         # Logs de procesamiento (no se versiona en git)
-├── tests/
-│   └── test_extraccion.py        # Pruebas automatizadas contra resultados esperados
-├── .gitignore
-├── requirements.txt
-└── README.md
-```
+---
 
 ## Diseño y mantenibilidad
 
-La extracción del encabezado se basa en **anclas de texto** (regex que
-busca la etiqueta, p. ej. `"NCF :"`, y captura lo que sigue), no en
-coordenadas absolutas. Esto permite que el sistema tolere pequeños
-desplazamientos del PDF entre un documento y otro. Si en el futuro un
-campo cambia de etiqueta o aparece un nuevo tipo de documento, basta con
-editar el diccionario `PATRONES` en `extractor_encabezado.py`, sin tocar
-el resto del código.
+La extracción del encabezado se basa en **anclas de texto** (regex que busca la etiqueta, por ejemplo `"NCF :"`, y captura lo que sigue), no en coordenadas absolutas. Esto permite tolerar pequeños desplazamientos del PDF entre un documento y otro. Si en el futuro un campo cambia de etiqueta o aparece un nuevo tipo de documento, basta con editar el diccionario `PATRONES` en `extractor_encabezado.py`.
 
-El procesamiento por lotes nunca se detiene por un PDF con error: cada
-archivo se procesa de forma aislada y cualquier fallo o inconsistencia
-queda registrado en el log con el motivo, permitiendo que el resto del
-lote continúe.
+El procesamiento por lotes nunca se detiene por un PDF con error: cada archivo se procesa de forma aislada y cualquier fallo queda registrado en el log con el motivo.
 
-## Limitaciones conocidas / próximos pasos
+---
 
-- Diseñado y probado contra **Notas de Crédito**. Si se procesan Facturas
-  regulares u otro tipo de documento con campos distintos, hay que
-  validar y, de ser necesario, ajustar `PATRONES` en
-  `extractor_encabezado.py`.
-- Asume PDF con texto nativo (no escaneado). Si llegaran PDF escaneados,
-  se necesitaría agregar OCR (`pytesseract`), no incluido por ahora.
-- Las líneas de detalle no incluyen cantidad ni precio unitario porque
-  el formato real de EGEHID no los presenta por línea (solo "Concepto" y
-  "Total RD$"); si en el futuro aparece un formato con esas columnas,
-  habría que extenderlas en `extractor_detalle.py`.
+## Limitaciones conocidas
+
+- Diseñado y probado contra **Notas de Crédito EGEHID**. Otros tipos de documento pueden requerir ajustes en `PATRONES` dentro de `extractor_encabezado.py`.
+- Solo funciona con **PDF de texto nativo** (no escaneados). Para PDFs escaneados se necesitaría agregar OCR (`pytesseract`).
+- Las líneas de detalle no incluyen cantidad ni precio unitario, ya que el formato EGEHID solo presenta "Concepto" y "Total RD$" por línea.
+
+---
+
+## Instalación y uso rápido (Windows)
+
+Para usuarios de Windows que prefieran no usar la terminal, el repositorio incluye dos scripts de acceso rápido.
+
+### instalar.bat
+
+Descarga automáticamente los archivos del proyecto desde GitHub, crea las carpetas necesarias, el entorno virtual e instala las dependencias. Solo hace falta ejecutarlo una vez.
+
+1. Descarga `instalar.bat` y `ejecutar.bat` en la carpeta donde quieras instalar el proyecto
+2. Descarga también `requirements.txt` y colócalo en la misma carpeta
+3. Haz doble clic en **`instalar.bat`**
+
+El instalador hace todo automáticamente:
+- Crea las carpetas `muestras/`, `salida/`, `logs/`, `procesados/` y `src/`
+- Descarga los scripts Python desde GitHub a `src/`
+- Crea el entorno virtual (`venv/`)
+- Instala las dependencias
+
+> Si Python no está instalado, descárgalo desde https://www.python.org y vuelve a ejecutar `instalar.bat`.
+
+### ejecutar.bat
+
+Una vez instalado, para procesar PDFs:
+
+1. Copia los PDF a la carpeta **`muestras\`**
+2. Haz doble clic en **`ejecutar.bat`**
+3. El Excel consolidado aparece en **`salida\resultado.xlsx`**
+4. Los PDF procesados se mueven automáticamente a **`procesados\`**
